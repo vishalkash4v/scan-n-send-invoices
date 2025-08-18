@@ -4,6 +4,7 @@ import { Dashboard } from "@/components/dashboard/Dashboard";
 import { ProductManagement } from "@/components/products/ProductManagement";
 
 const Index = () => {
+  console.log("Index component is rendering");
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   const renderCurrentPage = () => {
@@ -34,6 +35,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
+      <div style={{ background: 'red', color: 'white', padding: '20px', fontSize: '24px' }}>
+        DEBUG: NEW INDEX COMPONENT IS LOADING
+      </div>
       <Header currentPage={currentPage} onNavigate={setCurrentPage} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderCurrentPage()}
