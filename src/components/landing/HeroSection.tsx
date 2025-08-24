@@ -12,90 +12,135 @@ export const HeroSection = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero">
-      {/* 3D Background */}
-      <Scene3D />
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Modern Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background/95 to-muted/20"></div>
       
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-primary/30 rounded-full animate-float"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-primary-glow/40 rounded-full animate-float" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-32 left-1/4 w-16 h-16 bg-primary/50 rounded-full animate-float" style={{ animationDelay: '4s' }}></div>
+      {/* 3D Background */}
+      <div className="absolute inset-0 opacity-40">
+        <Scene3D />
+      </div>
+      
+      {/* Modern Geometric Shapes */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-primary-glow/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-gradient-to-r from-primary/10 to-primary-glow/10 rounded-2xl rotate-45 animate-float"></div>
+        <div className="absolute bottom-1/3 right-1/3 w-24 h-24 bg-gradient-to-l from-primary/15 to-primary-glow/15 rounded-full animate-float" style={{ animationDelay: '3s' }}></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="animate-fade-in">
-          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
-            Professional 
-            <span className="block bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              Invoice Generator
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center animate-fade-in">
+          {/* Badge */}
+          <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full border border-primary/20 mb-8">
+            <MaterialIcon name="new_releases" size={16} className="text-primary mr-2" />
+            <span className="text-sm font-medium text-primary">2025 Modern Design</span>
+          </div>
+
+          {/* Main Heading */}
+          <h1 className="text-6xl md:text-8xl font-bold mb-6 leading-tight">
+            <span className="bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
+              Next-Gen
+            </span>
+            <br />
+            <span className="bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
+              Invoice Platform
             </span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-            Create stunning invoices with smart product management, barcode scanning, 
-            and seamless export options. Perfect for businesses of all sizes.
+          {/* Subtitle */}
+          <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-4xl mx-auto leading-relaxed">
+            Revolutionary invoice creation with AI-powered insights, real-time collaboration, 
+            and advanced analytics. The future of business invoicing is here.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16">
             <Button 
               size="lg" 
               variant="hero"
               onClick={handleGetStarted}
-              className="text-lg px-8 py-4 shadow-glow hover:shadow-glow hover:scale-105 transition-all duration-300"
+              className="text-lg px-10 py-6 shadow-glow hover:shadow-glow hover:scale-105 transition-all duration-300 group"
             >
-              <MaterialIcon name="rocket_launch" size={24} className="mr-2" />
-              Start Creating Invoices
+              <MaterialIcon name="auto_awesome" size={24} className="mr-3 group-hover:rotate-12 transition-transform" />
+              Launch Dashboard
+              <MaterialIcon name="arrow_forward" size={20} className="ml-3 group-hover:translate-x-1 transition-transform" />
             </Button>
             
             <Button 
               size="lg" 
               variant="outline" 
-              className="text-lg px-8 py-4 bg-card/10 border-border text-foreground hover:bg-card/20 backdrop-blur-sm"
+              className="text-lg px-10 py-6 bg-background/50 border-border backdrop-blur-sm hover:bg-background/80 group"
               onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              <MaterialIcon name="play_circle" size={24} className="mr-2" />
+              <MaterialIcon name="play_circle_filled" size={24} className="mr-3 group-hover:scale-110 transition-transform" />
               Watch Demo
             </Button>
           </div>
 
-          {/* Email Signup */}
-          <div className="max-w-md mx-auto">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Input 
-                type="email"
-                placeholder="Enter your email for updates"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-card/10 border-border text-foreground placeholder:text-muted-foreground backdrop-blur-sm"
-              />
-              <Button variant="hero" className="whitespace-nowrap">
-                Get Updates
-              </Button>
-            </div>
-            <p className="text-muted-foreground text-sm mt-2">Join 10,000+ businesses already using InvoiceGen</p>
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
+            {[
+              { number: "50K+", label: "Active Users" },
+              { number: "1M+", label: "Invoices Created" },
+              { number: "99.9%", label: "Uptime" },
+              { number: "24/7", label: "Support" }
+            ].map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">{stat.number}</div>
+                <div className="text-sm text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
           </div>
-        </div>
 
-        {/* Features Preview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-          {[
-            { icon: "qr_code_scanner", title: "Barcode Scanning", desc: "Scan products instantly" },
-            { icon: "auto_awesome", title: "Smart Templates", desc: "Professional designs" },
-            { icon: "download", title: "Multiple Exports", desc: "PDF, PNG, JPG formats" }
-          ].map((feature, index) => (
-            <div key={index} className="bg-card/10 backdrop-blur-sm rounded-xl p-6 border border-border">
-              <MaterialIcon name={feature.icon} size={32} className="text-primary mb-3 mx-auto" />
-              <h3 className="text-foreground font-semibold mb-2">{feature.title}</h3>
-              <p className="text-muted-foreground text-sm">{feature.desc}</p>
-            </div>
-          ))}
+          {/* Features Preview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            {[
+              { 
+                icon: "qr_code_scanner", 
+                title: "Smart Scanning", 
+                desc: "AI-powered barcode recognition with instant product lookup",
+                gradient: "from-blue-500/10 to-cyan-500/10"
+              },
+              { 
+                icon: "auto_awesome", 
+                title: "Dynamic Templates", 
+                desc: "Adaptive designs that adjust to your brand automatically",
+                gradient: "from-purple-500/10 to-pink-500/10"
+              },
+              { 
+                icon: "cloud_sync", 
+                title: "Real-time Sync", 
+                desc: "Instant collaboration with live updates across devices",
+                gradient: "from-green-500/10 to-emerald-500/10"
+              }
+            ].map((feature, index) => (
+              <div 
+                key={index} 
+                className={`relative group p-8 rounded-2xl border border-border bg-gradient-to-br ${feature.gradient} backdrop-blur-sm hover:scale-105 transition-all duration-300`}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary-glow/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative">
+                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:bg-primary/20 transition-colors">
+                    <MaterialIcon name={feature.icon} size={32} className="text-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-3">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{feature.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-        <MaterialIcon name="keyboard_arrow_down" size={32} className="text-muted-foreground" />
+      {/* Animated Scroll Indicator */}
+      <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2">
+        <div className="flex flex-col items-center space-y-2 animate-bounce">
+          <div className="w-6 h-10 border-2 border-muted-foreground rounded-full flex justify-center">
+            <div className="w-1 h-3 bg-muted-foreground rounded-full mt-2 animate-pulse"></div>
+          </div>
+          <span className="text-xs text-muted-foreground">Scroll</span>
+        </div>
       </div>
     </section>
   );

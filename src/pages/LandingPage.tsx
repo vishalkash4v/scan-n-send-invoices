@@ -5,6 +5,7 @@ import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { FAQSection } from "@/components/landing/FAQSection";
+import { SEOHead } from "@/components/seo/SEOHead";
 
 const LandingPage = () => {
   // Schema.org structured data for SEO
@@ -39,10 +40,14 @@ const LandingPage = () => {
 
   return (
     <>
-      {/* Schema.org structured data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      <SEOHead
+        title="Professional Invoice Generator with Barcode Scanning"
+        description="Create professional invoices instantly with smart barcode scanning, product management, and multiple export formats. Free invoice generator for businesses of all sizes."
+        keywords="invoice generator, barcode scanner, invoice maker, business invoicing, free invoice tool, professional invoices, PDF export, PNG export, invoice templates"
+        structuredData={structuredData}
+        breadcrumbs={[
+          { name: "Home", item: "/" }
+        ]}
       />
       
       <div className="min-h-screen">

@@ -20,9 +20,104 @@ export const InvoiceHistory = ({ onNavigate }: InvoiceHistoryProps) => {
     invoice.buyer.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const exportInvoice = (invoice: Invoice, format: 'pdf' | 'png' | 'jpg') => {
-    // This would typically integrate with a PDF/image generation library
-    console.log(`Exporting invoice ${invoice.invoiceNumber} as ${format}`);
+  const exportInvoice = async (invoice: Invoice, format: 'pdf' | 'png' | 'jpg') => {
+    // Create a temporary preview element for export
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '-9999px';
+    document.body.appendChild(tempDiv);
+    
+    try {
+      const { exportToPDF, exportToPNG, exportToJPG } = await import('@/utils/exportUtils');
+      const filename = `${invoice.invoiceNumber}`;
+      
+      // Create invoice preview HTML (simplified version)
+      tempDiv.innerHTML = `
+        <div style="width: 800px; background: white; padding: 40px; font-family: Arial, sans-serif;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
+            <div>
+              <h1 style="font-size: 24px; font-weight: bold; color: #1a1a1a;">${invoice.company.name}</h1>
+              ${invoice.company.address ? `<p style="color: #666; margin-top: 8px;">${invoice.company.address}</p>` : ''}
+            </div>
+            <div style="text-align: right;">
+              <h2 style="font-size: 20px; font-weight: bold; color: #3b82f6;">INVOICE</h2>
+              <p style="color: #666;">Invoice #: ${invoice.invoiceNumber}</p>
+              <p style="color: #666;">Date: ${invoice.date}</p>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 40px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">Bill To:</h3>
+            <p style="font-weight: 600;">${invoice.buyer.name}</p>
+            ${invoice.buyer.email ? `<p style="color: #666;">${invoice.buyer.email}</p>` : ''}
+            ${invoice.buyer.address ? `<p style="color: #666;">${invoice.buyer.address}</p>` : ''}
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th style="padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb;">Description</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">Qty</th>
+                <th style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb;">Unit Price</th>
+                <th style="padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoice.items.map(item => `
+                <tr>
+                  <td style="padding: 12px; border-bottom: 1px solid #f3f4f6;">
+                    <strong>${item.productName}</strong>
+                    ${item.description ? `<br><small style="color: #666;">${item.description}</small>` : ''}
+                  </td>
+                  <td style="padding: 12px; text-align: center; border-bottom: 1px solid #f3f4f6;">${item.quantity}</td>
+                  <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f3f4f6;">$${item.unitPrice.toFixed(2)}</td>
+                  <td style="padding: 12px; text-align: right; border-bottom: 1px solid #f3f4f6;">$${item.total.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div style="text-align: right; width: 300px; margin-left: auto;">
+            <div style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+              <span>Subtotal:</span>
+              <span>$${invoice.subtotal.toFixed(2)}</span>
+            </div>
+            ${invoice.tax ? `
+              <div style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+                <span>Tax:</span>
+                <span>$${invoice.tax.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+              <span>Total:</span>
+              <span>$${invoice.total.toFixed(2)}</span>
+            </div>
+          </div>
+          
+          <div style="margin-top: 60px; text-align: center; color: #666; font-size: 14px;">
+            Thank you for your business!
+          </div>
+        </div>
+      `;
+      
+      switch (format) {
+        case 'pdf':
+          await exportToPDF(tempDiv.firstElementChild as HTMLElement, filename);
+          break;
+        case 'png':
+          await exportToPNG(tempDiv.firstElementChild as HTMLElement, filename);
+          break;
+        case 'jpg':
+          await exportToJPG(tempDiv.firstElementChild as HTMLElement, filename);
+          break;
+      }
+      
+    } catch (error) {
+      console.error(`Error exporting ${format}:`, error);
+    } finally {
+      document.body.removeChild(tempDiv);
+    }
   };
 
   return (

@@ -1,14 +1,13 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+
+# Sitemap
+Sitemap: https://invoicegen.com/sitemap.xml
+
+# Block sensitive areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_*
+
+# SEO optimizations
+Crawl-delay: 1

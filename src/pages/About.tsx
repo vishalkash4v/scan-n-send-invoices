@@ -2,8 +2,30 @@ import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { MaterialIcon } from "@/components/ui/material-icon";
+import { SEOHead } from "@/components/seo/SEOHead";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 const About = () => {
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "InvoiceGen",
+    "description": "Professional invoice generator platform helping businesses create beautiful invoices with advanced features",
+    "url": "https://invoicegen.com",
+    "logo": "https://invoicegen.com/logo.png",
+    "foundingDate": "2025",
+    "founder": {
+      "@type": "Person",
+      "name": "InvoiceGen Team"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+1-555-0123",
+      "contactType": "customer service",
+      "email": "support@invoicegen.com"
+    }
+  };
+
   const team = [
     {
       name: "Alex Johnson",
@@ -50,9 +72,29 @@ const About = () => {
 
   return (
     <div className="min-h-screen">
+      <SEOHead
+        title="About Us - Learn About InvoiceGen"
+        description="Learn about InvoiceGen, the modern invoice generation platform helping businesses worldwide create professional invoices with advanced features and seamless workflow."
+        keywords="about invoicegen, invoice software company, professional invoicing, business solutions, invoice platform"
+        structuredData={organizationSchema}
+        breadcrumbs={[
+          { name: "Home", item: "/" },
+          { name: "About Us", item: "/about" }
+        ]}
+      />
+      
       <PublicHeader />
       
       <main className="pt-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Breadcrumbs 
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'About Us' }
+            ]} 
+          />
+        </div>
+        
         {/* Hero Section */}
         <section className="py-20 bg-gradient-hero text-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

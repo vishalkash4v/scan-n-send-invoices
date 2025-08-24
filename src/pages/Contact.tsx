@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MaterialIcon } from "@/components/ui/material-icon";
 import { toast } from "@/hooks/use-toast";
+import { SEOHead } from "@/components/seo/SEOHead";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +18,14 @@ const Contact = () => {
     subject: '',
     message: ''
   });
+
+  const contactSchema = {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "name": "Contact InvoiceGen",
+    "description": "Get in touch with InvoiceGen support team for help with invoice generation, technical support, and business inquiries.",
+    "url": "https://invoicegen.com/contact"
+  };
 
   const contactInfo = [
     {
@@ -65,9 +75,29 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen">
+      <SEOHead
+        title="Contact Us - Get Support & Help"
+        description="Contact InvoiceGen support team for help with invoice generation, technical support, and business inquiries. We're here to help you succeed."
+        keywords="contact support, invoice help, technical support, customer service, business inquiries"
+        structuredData={contactSchema}
+        breadcrumbs={[
+          { name: "Home", item: "/" },
+          { name: "Contact", item: "/contact" }
+        ]}
+      />
+      
       <PublicHeader />
       
       <main className="pt-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Breadcrumbs 
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'Contact Us' }
+            ]} 
+          />
+        </div>
+        
         {/* Hero Section */}
         <section className="py-20 bg-gradient-hero text-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

@@ -24,7 +24,7 @@ const AdminPanel = () => {
           <p className="text-muted-foreground">Coming soon...</p>
         </div>;
       case 'create-invoice':
-        return <CreateInvoice />;
+        return <CreateInvoice onNavigate={setCurrentPage} />;
       case 'scan':
         return <BarcodeScanner />;
       default:
