@@ -12,12 +12,14 @@ export const PublicHeader = () => {
   ];
 
   return (
-    <header className="fixed top-0 w-full bg-background/95 backdrop-blur-sm border-b z-50">
+    <header className="fixed top-0 w-full bg-background/95 backdrop-blur-sm border-b border-border z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <MaterialIcon name="receipt" className="text-primary" size={32} />
-            <span className="text-2xl font-bold text-primary">InvoiceGen</span>
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <MaterialIcon name="receipt" className="text-primary-foreground" size={20} />
+            </div>
+            <span className="text-xl font-bold text-primary">InvoiceGen</span>
           </Link>
           
           <nav className="hidden md:flex items-center space-x-8">
