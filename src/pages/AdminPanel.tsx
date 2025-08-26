@@ -5,6 +5,8 @@ import { ProductManagement } from "@/components/products/ProductManagement";
 import { CreateInvoice } from "@/components/invoices/CreateInvoice";
 import { InvoiceHistory } from "@/components/invoices/InvoiceHistory";
 import { BarcodeScanner } from "@/components/scanner/BarcodeScanner";
+import { CompanySetup } from "@/components/dashboard/CompanySetup";
+import { CurrencySettings } from "@/components/settings/CurrencySettings";
 
 const AdminPanel = () => {
   console.log("AdminPanel component is rendering");
@@ -15,17 +17,16 @@ const AdminPanel = () => {
       case 'dashboard':
         return <Dashboard onNavigate={setCurrentPage} />;
       case 'products':
-        return <ProductManagement />;
+        return <ProductManagement onNavigate={setCurrentPage} />;
+      case 'setup':
+        return <CompanySetup onNavigate={setCurrentPage} />;
       case 'invoices':
         return <InvoiceHistory onNavigate={setCurrentPage} />;
       case 'settings':
-        return <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">Settings</h2>
-          <p className="text-muted-foreground">Coming soon...</p>
-        </div>;
+        return <CurrencySettings />;
       case 'create-invoice':
         return <CreateInvoice onNavigate={setCurrentPage} />;
-      case 'scan':
+      case 'scanner':
         return <BarcodeScanner />;
       default:
         return <Dashboard onNavigate={setCurrentPage} />;

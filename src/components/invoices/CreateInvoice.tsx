@@ -6,12 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MaterialIcon } from "@/components/ui/material-icon";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Invoice, InvoiceItem, Product, Buyer, Company } from "@/types/invoice";
+import { Invoice, InvoiceItem, Product, Buyer, Company, TaxSettings } from "@/types/invoice";
 import { useToast } from "@/hooks/use-toast";
-import { InvoicePreview } from "./InvoicePreview";
 import { RelatedLinks } from "@/components/ui/related-links";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { exportToPDF, exportToPNG, exportToJPG } from "@/utils/exportUtils";
+import { SUPPORTED_CURRENCIES, formatCurrency, getDefaultTaxSettings } from "@/utils/currencyUtils";
+import { INVOICE_TEMPLATES } from "./templates";
+import { ClassicTemplate } from "./templates/ClassicTemplate";
 
 interface CreateInvoiceProps {
   onNavigate: (page: string) => void;
@@ -20,19 +22,28 @@ interface CreateInvoiceProps {
 export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
   const { toast } = useToast();
   const [products] = useLocalStorage<Product[]>('products', []);
-  const [company] = useLocalStorage<Company>('company', {} as Company);
+  const [company, setCompany] = useLocalStorage<Company>('company', {} as Company);
   const [invoices, setInvoices] = useLocalStorage<Invoice[]>('invoices', []);
   const invoicePreviewRef = useRef<HTMLDivElement>(null);
+
+  // Get default currency and tax settings
+  const defaultCurrency = company.currency || 'USD';
+  const defaultTaxSettings = company.taxSettings || getDefaultTaxSettings(defaultCurrency);
 
   const [buyer, setBuyer] = useState<Buyer>({
     name: '',
     address: '',
-    email: ''
+    email: '',
+    phone: ''
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
+  const [selectedTemplate, setSelectedTemplate] = useState('classic');
+  const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
+  const [taxSettings, setTaxSettings] = useState<TaxSettings>(defaultTaxSettings);
+  const [shippingAmount, setShippingAmount] = useState<number>(0);
 
   const addItem = () => {
     if (!selectedProduct) return;
@@ -59,8 +70,14 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
   };
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const tax = subtotal * 0.1; // 10% tax
-  const total = subtotal + tax;
+  
+  let tax = 0;
+  if (taxSettings.taxType === 'excluded' && taxSettings.taxRate > 0) {
+    tax = subtotal * (taxSettings.taxRate / 100);
+  }
+  
+  const shipping = taxSettings.enableShipping ? shippingAmount : 0;
+  const total = subtotal + tax + shipping;
 
   const createInvoice = () => {
     if (!buyer.name || items.length === 0) {
@@ -80,9 +97,25 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
       items,
       subtotal,
       tax,
+      shipping,
       total,
-      company
+      company: {
+        ...company,
+        currency: selectedCurrency,
+        taxSettings: taxSettings
+      },
+      template: selectedTemplate,
+      currency: selectedCurrency
     };
+
+    // Update company settings if they've changed
+    if (company.currency !== selectedCurrency || JSON.stringify(company.taxSettings) !== JSON.stringify(taxSettings)) {
+      setCompany({
+        ...company,
+        currency: selectedCurrency,
+        taxSettings: taxSettings
+      });
+    }
 
     setInvoices([...invoices, newInvoice]);
     
@@ -92,8 +125,9 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
     });
 
     // Reset form
-    setBuyer({ name: '', address: '', email: '' });
+    setBuyer({ name: '', address: '', email: '', phone: '' });
     setItems([]);
+    setShippingAmount(0);
   };
 
   const handleExport = async (format: 'pdf' | 'png' | 'jpg') => {
@@ -129,6 +163,12 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
 
   const relatedLinks = [
     {
+      title: "Currency Settings",
+      description: "Configure currency and tax settings",
+      icon: "currency_exchange",
+      action: () => onNavigate('settings')
+    },
+    {
       title: "Add Products",
       description: "Manage your product catalog",
       icon: "add_box",
@@ -153,6 +193,9 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
       action: () => onNavigate('scanner')
     }
   ];
+
+  // Get the selected template component
+  const SelectedTemplate = INVOICE_TEMPLATES.find(t => t.id === selectedTemplate)?.component || ClassicTemplate;
 
   return (
     <div className="space-y-6">
@@ -198,6 +241,148 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
 
       <div className="grid gap-6 lg:grid-cols-3 xl:grid-cols-4">
         <div className="space-y-6">
+          {/* Template Selection */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MaterialIcon name="palette" className="text-primary" />
+                <span>Invoice Template</span>
+              </CardTitle>
+              <CardDescription>Choose your preferred invoice design</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-3">
+                {INVOICE_TEMPLATES.map((template) => (
+                  <div
+                    key={template.id}
+                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                      selectedTemplate === template.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    onClick={() => setSelectedTemplate(template.id)}
+                  >
+                    <h4 className="font-medium">{template.name}</h4>
+                    <p className="text-sm text-muted-foreground">{template.description}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Currency & Tax Settings */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MaterialIcon name="currency_exchange" className="text-primary" />
+                <span>Currency & Tax</span>
+              </CardTitle>
+              <CardDescription>Configure invoice currency and tax settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Currency Selection */}
+              <div>
+                <Label htmlFor="currency">Currency</Label>
+                <select
+                  id="currency"
+                  value={selectedCurrency}
+                  onChange={(e) => {
+                    setSelectedCurrency(e.target.value);
+                    setTaxSettings(getDefaultTaxSettings(e.target.value));
+                  }}
+                  className="w-full px-3 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {SUPPORTED_CURRENCIES.map((currency) => (
+                    <option key={currency.code} value={currency.code}>
+                      {currency.symbol} {currency.code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tax Settings */}
+              <div>
+                <Label htmlFor="taxType">Tax Type</Label>
+                <select
+                  id="taxType"
+                  value={taxSettings.taxType}
+                  onChange={(e) => setTaxSettings({
+                    ...taxSettings,
+                    taxType: e.target.value as 'included' | 'excluded' | 'none'
+                  })}
+                  className="w-full px-3 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="none">No Tax</option>
+                  <option value="excluded">Tax Excluded</option>
+                  <option value="included">Tax Included</option>
+                </select>
+              </div>
+
+              {taxSettings.taxType !== 'none' && (
+                <>
+                  <div>
+                    <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                    <Input
+                      id="taxRate"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={taxSettings.taxRate}
+                      onChange={(e) => setTaxSettings({
+                        ...taxSettings,
+                        taxRate: parseFloat(e.target.value) || 0
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="taxName">Tax Name</Label>
+                    <Input
+                      id="taxName"
+                      value={taxSettings.taxName}
+                      onChange={(e) => setTaxSettings({
+                        ...taxSettings,
+                        taxName: e.target.value
+                      })}
+                      placeholder="e.g., GST, VAT, Sales Tax"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Shipping */}
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="enableShipping"
+                    checked={taxSettings.enableShipping}
+                    onChange={(e) => setTaxSettings({
+                      ...taxSettings,
+                      enableShipping: e.target.checked
+                    })}
+                    className="rounded"
+                  />
+                  <Label htmlFor="enableShipping">Enable Shipping</Label>
+                </div>
+                {taxSettings.enableShipping && (
+                  <div>
+                    <Label htmlFor="shippingAmount">Shipping Amount</Label>
+                    <Input
+                      id="shippingAmount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={shippingAmount}
+                      onChange={(e) => setShippingAmount(parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Buyer Information */}
           <Card className="shadow-card">
             <CardHeader>
@@ -225,6 +410,16 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
                   value={buyer.email}
                   onChange={(e) => setBuyer({...buyer, email: e.target.value})}
                   placeholder="client@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="buyerPhone">Phone</Label>
+                <Input
+                  id="buyerPhone"
+                  type="tel"
+                  value={buyer.phone}
+                  onChange={(e) => setBuyer({...buyer, phone: e.target.value})}
+                  placeholder="+1 (555) 123-4567"
                 />
               </div>
               <div>
@@ -261,7 +456,7 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
                   <option value="">Select a product</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
-                      {product.name} - ${product.unitPrice}
+                      {product.name} - {formatCurrency(product.unitPrice, selectedCurrency)}
                     </option>
                   ))}
                 </select>
@@ -290,20 +485,26 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <MaterialIcon name="preview" className="text-primary" />
-                <span>Live Preview</span>
+                <span>Live Preview - {INVOICE_TEMPLATES.find(t => t.id === selectedTemplate)?.name}</span>
               </CardTitle>
               <CardDescription>Real-time invoice preview</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="max-h-[600px] overflow-y-auto">
-                <InvoicePreview
+                <SelectedTemplate
                   ref={invoicePreviewRef}
-                  company={company}
+                  company={{
+                    ...company,
+                    currency: selectedCurrency,
+                    taxSettings: taxSettings
+                  }}
                   buyer={buyer}
                   items={items}
                   subtotal={subtotal}
                   tax={tax}
+                  shipping={shipping}
                   total={total}
+                  currency={selectedCurrency}
                 />
               </div>
             </CardContent>
@@ -329,7 +530,7 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
                   <div className="flex-1">
                     <h4 className="font-medium">{item.productName}</h4>
                     <p className="text-sm text-muted-foreground">
-                      ${item.unitPrice} × {item.quantity} = ${item.total.toFixed(2)}
+                      {formatCurrency(item.unitPrice, selectedCurrency)} × {item.quantity} = {formatCurrency(item.total, selectedCurrency)}
                     </p>
                   </div>
                   <Button
@@ -348,15 +549,23 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
               <div className="space-y-2 text-right">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{formatCurrency(subtotal, selectedCurrency)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Tax (10%):</span>
-                  <span>${tax.toFixed(2)}</span>
-                </div>
+                {taxSettings.taxType === 'excluded' && taxSettings.taxRate > 0 && (
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>{taxSettings.taxName} ({taxSettings.taxRate}%):</span>
+                    <span>{formatCurrency(tax, selectedCurrency)}</span>
+                  </div>
+                )}
+                {shipping > 0 && (
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Shipping:</span>
+                    <span>{formatCurrency(shipping, selectedCurrency)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold pt-2 border-t">
                   <span>Total:</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{formatCurrency(total, selectedCurrency)}</span>
                 </div>
               </div>
             </div>
