@@ -8,7 +8,11 @@ import { MaterialIcon } from "@/components/ui/material-icon";
 import { Company } from "@/types/invoice";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
-export const CompanySetup = () => {
+interface CompanySetupProps {
+  onNavigate?: (page: string) => void;
+}
+
+export const CompanySetup = ({ onNavigate }: CompanySetupProps) => {
   const [company, setCompany] = useLocalStorage<Company>('company', {
     name: '',
     tagline: '',

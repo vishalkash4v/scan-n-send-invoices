@@ -9,7 +9,11 @@ import { Product } from "@/types/invoice";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { toast } from "@/hooks/use-toast";
 
-export const ProductManagement = () => {
+interface ProductManagementProps {
+  onNavigate?: (page: string) => void;
+}
+
+export const ProductManagement = ({ onNavigate }: ProductManagementProps) => {
   const [products, setProducts] = useLocalStorage<Product[]>('products', []);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);

@@ -117,7 +117,7 @@ export const InvoiceHistory = ({ onNavigate }: InvoiceHistoryProps) => {
             <Card key={invoice.id} className="shadow-card hover:shadow-elegant transition-smooth">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex-1" onClick={() => setSelectedInvoice(invoice)} className="cursor-pointer">
+                  <div className="flex-1 cursor-pointer" onClick={() => setSelectedInvoice(invoice)}>
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-lg font-semibold">{invoice.invoiceNumber}</h3>
                       <Badge variant="secondary">{formatCurrency(invoice.total, invoice.currency || 'USD')}</Badge>

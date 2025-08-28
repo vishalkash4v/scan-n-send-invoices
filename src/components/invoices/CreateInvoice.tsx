@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MaterialIcon } from "@/components/ui/material-icon";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Invoice, InvoiceItem, Product, Buyer, Company, TaxSettings } from "@/types/invoice";
+import { Invoice, InvoiceItem, Product, Buyer, Company, TaxSettings, Discount } from "@/types/invoice";
 import { useToast } from "@/hooks/use-toast";
 import { RelatedLinks } from "@/components/ui/related-links";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -14,6 +14,7 @@ import { exportToPDF, exportToPNG, exportToJPG } from "@/utils/exportUtils";
 import { SUPPORTED_CURRENCIES, formatCurrency, getDefaultTaxSettings } from "@/utils/currencyUtils";
 import { INVOICE_TEMPLATES } from "./templates";
 import { ClassicTemplate } from "./templates/ClassicTemplate";
+import { SEOHead } from "@/components/seo/SEOHead";
 
 interface CreateInvoiceProps {
   onNavigate: (page: string) => void;
@@ -44,6 +45,8 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
   const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
   const [taxSettings, setTaxSettings] = useState<TaxSettings>(defaultTaxSettings);
   const [shippingAmount, setShippingAmount] = useState<number>(0);
+  const [discount, setDiscount] = useState<Discount>({ type: 'flat', amount: 0, name: '' });
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
   const addItem = () => {
     if (!selectedProduct) return;
@@ -69,15 +72,43 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
     setItems(items.filter((_, i) => i !== index));
   };
 
+  const updateItemQuantity = (index: number, newQuantity: number) => {
+    if (newQuantity <= 0) return;
+    const updatedItems = items.map((item, i) => 
+      i === index 
+        ? { ...item, quantity: newQuantity, total: item.unitPrice * newQuantity }
+        : item
+    );
+    setItems(updatedItems);
+  };
+
+  const editItem = (index: number) => {
+    setEditingItemIndex(index);
+  };
+
+  const saveItemEdit = (index: number) => {
+    setEditingItemIndex(null);
+  };
+
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  
+  // Calculate discount amount
+  let discountAmount = 0;
+  if (discount.amount > 0) {
+    discountAmount = discount.type === 'percentage' 
+      ? subtotal * (discount.amount / 100)
+      : discount.amount;
+  }
+  
+  const discountedSubtotal = subtotal - discountAmount;
   
   let tax = 0;
   if (taxSettings.taxType === 'excluded' && taxSettings.taxRate > 0) {
-    tax = subtotal * (taxSettings.taxRate / 100);
+    tax = discountedSubtotal * (taxSettings.taxRate / 100);
   }
   
   const shipping = taxSettings.enableShipping ? shippingAmount : 0;
-  const total = subtotal + tax + shipping;
+  const total = discountedSubtotal + tax + shipping;
 
   const createInvoice = () => {
     if (!buyer.name || items.length === 0) {
@@ -98,6 +129,7 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
       subtotal,
       tax,
       shipping,
+      discount: discount.amount > 0 ? discount : undefined,
       total,
       company: {
         ...company,
@@ -128,6 +160,7 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
     setBuyer({ name: '', address: '', email: '', phone: '' });
     setItems([]);
     setShippingAmount(0);
+    setDiscount({ type: 'flat', amount: 0, name: '' });
   };
 
   const handleExport = async (format: 'pdf' | 'png' | 'jpg') => {
@@ -198,394 +231,503 @@ export const CreateInvoice = ({ onNavigate }: CreateInvoiceProps) => {
   const SelectedTemplate = INVOICE_TEMPLATES.find(t => t.id === selectedTemplate)?.component || ClassicTemplate;
 
   return (
-    <div className="space-y-6">
-      <Breadcrumbs 
-        items={[
-          { label: 'Dashboard', href: '/admin' },
-          { label: 'Create Invoice' }
-        ]} 
+    <>
+      <SEOHead 
+        title="Create Invoice - Professional Invoice Generator"
+        description="Create professional invoices with real-time preview, multiple templates, and instant PDF export. Add products, customize templates, and manage your billing efficiently."
+        keywords="create invoice, invoice generator, invoice template, PDF invoice, professional invoicing"
       />
-      
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-            <MaterialIcon name="add_circle" className="text-primary" size={28} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Create New Invoice</h1>
-            <p className="text-muted-foreground">Generate professional invoices with real-time preview</p>
-          </div>
-        </div>
+      <div className="space-y-4 lg:space-y-6 px-4 lg:px-0">
+        <Breadcrumbs 
+          items={[
+            { label: 'Dashboard', href: '/admin' },
+            { label: 'Create Invoice' }
+          ]} 
+        />
         
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExport('pdf')}
-            disabled={items.length === 0}
-          >
-            <MaterialIcon name="picture_as_pdf" size={16} className="mr-2" />
-            Export PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExport('png')}
-            disabled={items.length === 0}
-          >
-            <MaterialIcon name="image" size={16} className="mr-2" />
-            Export PNG
-          </Button>
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+              <MaterialIcon name="add_circle" className="text-primary" size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold">Create New Invoice</h1>
+              <p className="text-muted-foreground text-sm lg:text-base">Generate professional invoices with real-time preview</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('pdf')}
+              disabled={items.length === 0}
+              className="text-xs lg:text-sm"
+            >
+              <MaterialIcon name="picture_as_pdf" size={16} className="mr-1 lg:mr-2" />
+              Export PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('png')}
+              disabled={items.length === 0}
+              className="text-xs lg:text-sm"
+            >
+              <MaterialIcon name="image" size={16} className="mr-1 lg:mr-2" />
+              Export PNG
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-3 xl:grid-cols-4">
-        <div className="space-y-6">
-          {/* Template Selection */}
+        <div className="grid gap-4 lg:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="space-y-4 lg:space-y-6 lg:col-span-1">
+            {/* Template Selection */}
+            <Card className="shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center space-x-2 text-base lg:text-lg">
+                  <MaterialIcon name="palette" className="text-primary" size={20} />
+                  <span>Invoice Template</span>
+                </CardTitle>
+                <CardDescription className="text-sm">Choose your preferred invoice design</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-2">
+                  {INVOICE_TEMPLATES.map((template) => (
+                    <div
+                      key={template.id}
+                      className={`p-2 lg:p-3 border rounded-lg cursor-pointer transition-colors text-sm ${
+                        selectedTemplate === template.id
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      onClick={() => setSelectedTemplate(template.id)}
+                    >
+                      <h4 className="font-medium">{template.name}</h4>
+                      <p className="text-xs text-muted-foreground">{template.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Currency & Tax Settings */}
+            <Card className="shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center space-x-2 text-base lg:text-lg">
+                  <MaterialIcon name="currency_exchange" className="text-primary" size={20} />
+                  <span>Currency & Tax</span>
+                </CardTitle>
+                <CardDescription className="text-sm">Configure invoice currency and tax settings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 lg:space-y-4">
+                {/* Currency Selection */}
+                <div>
+                  <Label htmlFor="currency" className="text-sm">Currency</Label>
+                  <select
+                    id="currency"
+                    value={selectedCurrency}
+                    onChange={(e) => {
+                      setSelectedCurrency(e.target.value);
+                      setTaxSettings(getDefaultTaxSettings(e.target.value));
+                    }}
+                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {SUPPORTED_CURRENCIES.map((currency) => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.symbol} {currency.code}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Tax Settings */}
+                <div>
+                  <Label htmlFor="taxType" className="text-sm">Tax Type</Label>
+                  <select
+                    id="taxType"
+                    value={taxSettings.taxType}
+                    onChange={(e) => setTaxSettings({
+                      ...taxSettings,
+                      taxType: e.target.value as 'included' | 'excluded' | 'none'
+                    })}
+                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="none">No Tax</option>
+                    <option value="excluded">Tax Excluded</option>
+                    <option value="included">Tax Included</option>
+                  </select>
+                </div>
+
+                {taxSettings.taxType !== 'none' && (
+                  <>
+                    <div>
+                      <Label htmlFor="taxRate" className="text-sm">Tax Rate (%)</Label>
+                      <Input
+                        id="taxRate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={taxSettings.taxRate}
+                        onChange={(e) => setTaxSettings({
+                          ...taxSettings,
+                          taxRate: parseFloat(e.target.value) || 0
+                        })}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="taxName" className="text-sm">Tax Name</Label>
+                      <Input
+                        id="taxName"
+                        value={taxSettings.taxName}
+                        onChange={(e) => setTaxSettings({
+                          ...taxSettings,
+                          taxName: e.target.value
+                        })}
+                        placeholder="e.g., GST, VAT, Sales Tax"
+                        className="text-sm"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Shipping */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enableShipping"
+                      checked={taxSettings.enableShipping}
+                      onChange={(e) => setTaxSettings({
+                        ...taxSettings,
+                        enableShipping: e.target.checked
+                      })}
+                      className="rounded"
+                    />
+                    <Label htmlFor="enableShipping" className="text-sm">Enable Shipping</Label>
+                  </div>
+                  {taxSettings.enableShipping && (
+                    <div>
+                      <Label htmlFor="shippingAmount" className="text-sm">Shipping Amount</Label>
+                      <Input
+                        id="shippingAmount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={shippingAmount}
+                        onChange={(e) => setShippingAmount(parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Discount Settings */}
+            <Card className="shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center space-x-2 text-base lg:text-lg">
+                  <MaterialIcon name="discount" className="text-primary" size={20} />
+                  <span>Discount</span>
+                </CardTitle>
+                <CardDescription className="text-sm">Add discount to invoice</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 lg:space-y-4">
+                <div>
+                  <Label htmlFor="discountName" className="text-sm">Discount Name</Label>
+                  <Input
+                    id="discountName"
+                    value={discount.name}
+                    onChange={(e) => setDiscount({ ...discount, name: e.target.value })}
+                    placeholder="e.g., Early Bird, Bulk Order"
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="discountType" className="text-sm">Discount Type</Label>
+                  <select
+                    id="discountType"
+                    value={discount.type}
+                    onChange={(e) => setDiscount({ ...discount, type: e.target.value as 'flat' | 'percentage' })}
+                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="flat">Flat Amount</option>
+                    <option value="percentage">Percentage</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="discountAmount" className="text-sm">
+                    {discount.type === 'percentage' ? 'Percentage (%)' : 'Amount'}
+                  </Label>
+                  <Input
+                    id="discountAmount"
+                    type="number"
+                    min="0"
+                    step={discount.type === 'percentage' ? '0.1' : '0.01'}
+                    max={discount.type === 'percentage' ? '100' : undefined}
+                    value={discount.amount}
+                    onChange={(e) => setDiscount({ ...discount, amount: parseFloat(e.target.value) || 0 })}
+                    placeholder={discount.type === 'percentage' ? '10' : '0.00'}
+                    className="text-sm"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Buyer Information */}
+            <Card className="shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center space-x-2 text-base lg:text-lg">
+                  <MaterialIcon name="person" className="text-primary" size={20} />
+                  <span>Buyer Information</span>
+                </CardTitle>
+                <CardDescription className="text-sm">Enter your client's details</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 lg:space-y-4">
+                <div>
+                  <Label htmlFor="buyerName" className="text-sm">Name *</Label>
+                  <Input
+                    id="buyerName"
+                    value={buyer.name}
+                    onChange={(e) => setBuyer({...buyer, name: e.target.value})}
+                    placeholder="Client name"
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="buyerEmail" className="text-sm">Email</Label>
+                  <Input
+                    id="buyerEmail"
+                    type="email"
+                    value={buyer.email}
+                    onChange={(e) => setBuyer({...buyer, email: e.target.value})}
+                    placeholder="client@example.com"
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="buyerPhone" className="text-sm">Phone</Label>
+                  <Input
+                    id="buyerPhone"
+                    type="tel"
+                    value={buyer.phone}
+                    onChange={(e) => setBuyer({...buyer, phone: e.target.value})}
+                    placeholder="+1 (555) 123-4567"
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="buyerAddress" className="text-sm">Address</Label>
+                  <Textarea
+                    id="buyerAddress"
+                    value={buyer.address}
+                    onChange={(e) => setBuyer({...buyer, address: e.target.value})}
+                    placeholder="Client address"
+                    rows={3}
+                    className="text-sm resize-none"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Add Items */}
+            <Card className="shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center space-x-2 text-base lg:text-lg">
+                  <MaterialIcon name="add_shopping_cart" className="text-primary" size={20} />
+                  <span>Add Items</span>
+                </CardTitle>
+                <CardDescription className="text-sm">Select products and quantities</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 lg:space-y-4">
+                <div>
+                  <Label htmlFor="product" className="text-sm">Product</Label>
+                  <select
+                    id="product"
+                    value={selectedProduct}
+                    onChange={(e) => setSelectedProduct(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Select a product</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} - {formatCurrency(product.unitPrice, selectedCurrency)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="quantity" className="text-sm">Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    className="text-sm"
+                  />
+                </div>
+                <Button onClick={addItem} className="w-full text-sm" disabled={!selectedProduct}>
+                  <MaterialIcon name="add" size={16} className="mr-2" />
+                  Add Item
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Real-time Invoice Preview */}
+          <div className="lg:col-span-2 xl:col-span-3">
+            <Card className="shadow-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center space-x-2 text-base lg:text-lg">
+                  <MaterialIcon name="preview" className="text-primary" size={20} />
+                  <span>Live Preview - {INVOICE_TEMPLATES.find(t => t.id === selectedTemplate)?.name}</span>
+                </CardTitle>
+                <CardDescription className="text-sm">Real-time invoice preview</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[400px] lg:max-h-[600px] overflow-y-auto border rounded-lg">
+                  <SelectedTemplate
+                    ref={invoicePreviewRef}
+                    company={{
+                      ...company,
+                      currency: selectedCurrency,
+                      taxSettings: taxSettings
+                    }}
+                    buyer={buyer}
+                    items={items}
+                    subtotal={subtotal}
+                    tax={tax}
+                    shipping={shipping}
+                    discount={discount.amount > 0 ? discount : undefined}
+                    total={total}
+                    currency={selectedCurrency}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Invoice Items */}
+        {items.length > 0 && (
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MaterialIcon name="palette" className="text-primary" />
-                <span>Invoice Template</span>
-              </CardTitle>
-              <CardDescription>Choose your preferred invoice design</CardDescription>
+              <CardTitle className="text-base lg:text-lg">Invoice Items</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-3">
-                {INVOICE_TEMPLATES.map((template) => (
-                  <div
-                    key={template.id}
-                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      selectedTemplate === template.id
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                    onClick={() => setSelectedTemplate(template.id)}
-                  >
-                    <h4 className="font-medium">{template.name}</h4>
-                    <p className="text-sm text-muted-foreground">{template.description}</p>
+              <div className="space-y-3">
+                {items.map((item, index) => (
+                  <div key={index} className="flex flex-col lg:flex-row items-start lg:items-center justify-between p-3 lg:p-4 bg-muted/30 rounded-lg gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm lg:text-base truncate">{item.productName}</h4>
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-4 text-xs lg:text-sm text-muted-foreground">
+                        <span>{formatCurrency(item.unitPrice, selectedCurrency)} × {item.quantity}</span>
+                        <span className="hidden lg:inline">=</span>
+                        <span className="font-medium">{formatCurrency(item.total, selectedCurrency)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 w-full lg:w-auto">
+                      {editingItemIndex === index ? (
+                        <>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateItemQuantity(index, parseInt(e.target.value) || 1)}
+                            className="w-16 h-8 text-xs"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => saveItemEdit(index)}
+                            className="h-8 px-2 text-xs"
+                          >
+                            <MaterialIcon name="check" size={16} />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => editItem(index)}
+                            className="h-8 px-2 text-xs"
+                          >
+                            <MaterialIcon name="edit" size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeItem(index)}
+                            className="text-destructive hover:text-destructive h-8 px-2"
+                          >
+                            <MaterialIcon name="delete" size={16} />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Currency & Tax Settings */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MaterialIcon name="currency_exchange" className="text-primary" />
-                <span>Currency & Tax</span>
-              </CardTitle>
-              <CardDescription>Configure invoice currency and tax settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Currency Selection */}
-              <div>
-                <Label htmlFor="currency">Currency</Label>
-                <select
-                  id="currency"
-                  value={selectedCurrency}
-                  onChange={(e) => {
-                    setSelectedCurrency(e.target.value);
-                    setTaxSettings(getDefaultTaxSettings(e.target.value));
-                  }}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {SUPPORTED_CURRENCIES.map((currency) => (
-                    <option key={currency.code} value={currency.code}>
-                      {currency.symbol} {currency.code}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Tax Settings */}
-              <div>
-                <Label htmlFor="taxType">Tax Type</Label>
-                <select
-                  id="taxType"
-                  value={taxSettings.taxType}
-                  onChange={(e) => setTaxSettings({
-                    ...taxSettings,
-                    taxType: e.target.value as 'included' | 'excluded' | 'none'
-                  })}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="none">No Tax</option>
-                  <option value="excluded">Tax Excluded</option>
-                  <option value="included">Tax Included</option>
-                </select>
-              </div>
-
-              {taxSettings.taxType !== 'none' && (
-                <>
-                  <div>
-                    <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                    <Input
-                      id="taxRate"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={taxSettings.taxRate}
-                      onChange={(e) => setTaxSettings({
-                        ...taxSettings,
-                        taxRate: parseFloat(e.target.value) || 0
-                      })}
-                    />
+              <div className="mt-6 pt-6 border-t">
+                <div className="space-y-2 text-right text-sm lg:text-base">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(subtotal, selectedCurrency)}</span>
                   </div>
-                  <div>
-                    <Label htmlFor="taxName">Tax Name</Label>
-                    <Input
-                      id="taxName"
-                      value={taxSettings.taxName}
-                      onChange={(e) => setTaxSettings({
-                        ...taxSettings,
-                        taxName: e.target.value
-                      })}
-                      placeholder="e.g., GST, VAT, Sales Tax"
-                    />
+                  {discount.amount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount ({discount.name}):</span>
+                      <span>-{discount.type === 'percentage' ? `${discount.amount}%` : formatCurrency(discount.amount, selectedCurrency)}</span>
+                    </div>
+                  )}
+                  {taxSettings.taxType === 'excluded' && taxSettings.taxRate > 0 && (
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>{taxSettings.taxName} ({taxSettings.taxRate}%):</span>
+                      <span>{formatCurrency(tax, selectedCurrency)}</span>
+                    </div>
+                  )}
+                  {shipping > 0 && (
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Shipping:</span>
+                      <span>{formatCurrency(shipping, selectedCurrency)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                    <span>Total:</span>
+                    <span>{formatCurrency(total, selectedCurrency)}</span>
                   </div>
-                </>
-              )}
-
-              {/* Shipping */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="enableShipping"
-                    checked={taxSettings.enableShipping}
-                    onChange={(e) => setTaxSettings({
-                      ...taxSettings,
-                      enableShipping: e.target.checked
-                    })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="enableShipping">Enable Shipping</Label>
                 </div>
-                {taxSettings.enableShipping && (
-                  <div>
-                    <Label htmlFor="shippingAmount">Shipping Amount</Label>
-                    <Input
-                      id="shippingAmount"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={shippingAmount}
-                      onChange={(e) => setShippingAmount(parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
+        )}
 
-          {/* Buyer Information */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MaterialIcon name="person" className="text-primary" />
-                <span>Buyer Information</span>
-              </CardTitle>
-              <CardDescription>Enter your client's details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="buyerName">Name *</Label>
-                <Input
-                  id="buyerName"
-                  value={buyer.name}
-                  onChange={(e) => setBuyer({...buyer, name: e.target.value})}
-                  placeholder="Client name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="buyerEmail">Email</Label>
-                <Input
-                  id="buyerEmail"
-                  type="email"
-                  value={buyer.email}
-                  onChange={(e) => setBuyer({...buyer, email: e.target.value})}
-                  placeholder="client@example.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="buyerPhone">Phone</Label>
-                <Input
-                  id="buyerPhone"
-                  type="tel"
-                  value={buyer.phone}
-                  onChange={(e) => setBuyer({...buyer, phone: e.target.value})}
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
-              <div>
-                <Label htmlFor="buyerAddress">Address</Label>
-                <Textarea
-                  id="buyerAddress"
-                  value={buyer.address}
-                  onChange={(e) => setBuyer({...buyer, address: e.target.value})}
-                  placeholder="Client address"
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Add Items */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MaterialIcon name="add_shopping_cart" className="text-primary" />
-                <span>Add Items</span>
-              </CardTitle>
-              <CardDescription>Select products and quantities</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="product">Product</Label>
-                <select
-                  id="product"
-                  value={selectedProduct}
-                  onChange={(e) => setSelectedProduct(e.target.value)}
-                  className="w-full px-3 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Select a product</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} - {formatCurrency(product.unitPrice, selectedCurrency)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                />
-              </div>
-              <Button onClick={addItem} className="w-full" disabled={!selectedProduct}>
-                <MaterialIcon name="add" size={16} className="mr-2" />
-                Add Item
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Real-time Invoice Preview */}
-        <div className="lg:col-span-2">
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MaterialIcon name="preview" className="text-primary" />
-                <span>Live Preview - {INVOICE_TEMPLATES.find(t => t.id === selectedTemplate)?.name}</span>
-              </CardTitle>
-              <CardDescription>Real-time invoice preview</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="max-h-[600px] overflow-y-auto">
-                <SelectedTemplate
-                  ref={invoicePreviewRef}
-                  company={{
-                    ...company,
-                    currency: selectedCurrency,
-                    taxSettings: taxSettings
-                  }}
-                  buyer={buyer}
-                  items={items}
-                  subtotal={subtotal}
-                  tax={tax}
-                  shipping={shipping}
-                  total={total}
-                  currency={selectedCurrency}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Related Links Sidebar */}
-        <div className="space-y-6">
+        {/* Related Links Sidebar - Mobile version at bottom */}
+        <div className="lg:hidden">
           <RelatedLinks links={relatedLinks} />
         </div>
+
+        {/* Create Invoice Button */}
+        <div className="flex justify-center pb-6">
+          <Button
+            onClick={createInvoice}
+            size="lg"
+            className="px-8 lg:px-12 py-3 text-base lg:text-lg shadow-glow hover:shadow-glow hover:scale-105 transition-all duration-300 w-full lg:w-auto"
+            disabled={!buyer.name || items.length === 0}
+          >
+            <MaterialIcon name="receipt_long" size={24} className="mr-3" />
+            Create & Save Invoice
+            <MaterialIcon name="arrow_forward" size={20} className="ml-3" />
+          </Button>
+        </div>
       </div>
-
-      {/* Invoice Items */}
-      {items.length > 0 && (
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle>Invoice Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {items.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{item.productName}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {formatCurrency(item.unitPrice, selectedCurrency)} × {item.quantity} = {formatCurrency(item.total, selectedCurrency)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeItem(index)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <MaterialIcon name="delete" size={20} />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 pt-6 border-t">
-              <div className="space-y-2 text-right">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(subtotal, selectedCurrency)}</span>
-                </div>
-                {taxSettings.taxType === 'excluded' && taxSettings.taxRate > 0 && (
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{taxSettings.taxName} ({taxSettings.taxRate}%):</span>
-                    <span>{formatCurrency(tax, selectedCurrency)}</span>
-                  </div>
-                )}
-                {shipping > 0 && (
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Shipping:</span>
-                    <span>{formatCurrency(shipping, selectedCurrency)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                  <span>Total:</span>
-                  <span>{formatCurrency(total, selectedCurrency)}</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Create Invoice Button */}
-      <div className="flex justify-center">
-        <Button
-          onClick={createInvoice}
-          size="lg"
-          className="px-12 py-3 text-lg shadow-glow hover:shadow-glow hover:scale-105 transition-all duration-300"
-          disabled={!buyer.name || items.length === 0}
-        >
-          <MaterialIcon name="receipt_long" size={24} className="mr-3" />
-          Create & Save Invoice
-          <MaterialIcon name="arrow_forward" size={20} className="ml-3" />
-        </Button>
-      </div>
-    </div>
+    </>
   );
 };

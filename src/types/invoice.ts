@@ -39,6 +39,12 @@ export interface InvoiceItem {
   total: number;
 }
 
+export interface Discount {
+  type: 'flat' | 'percentage';
+  amount: number;
+  name: string;
+}
+
 export interface Buyer {
   name: string;
   address?: string;
@@ -55,6 +61,7 @@ export interface Invoice {
   subtotal: number;
   tax?: number;
   shipping?: number;
+  discount?: Discount;
   total: number;
   company: Company;
   template?: string;
